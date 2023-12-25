@@ -158,7 +158,6 @@ final class CropView: UIView {
             cropAuxiliaryIndicatorView.isHidden = true
             toggleRotationControlViewIsNeeded(isHidden: true)
         case .touchImage:
-            cropMaskViewManager.showDimmingBackground(animated: true)
             cropAuxiliaryIndicatorView.gridLineNumberType = .crop
             cropAuxiliaryIndicatorView.gridHidden = false
         case .touchCropboxHandle(let tappedEdge):
@@ -363,7 +362,7 @@ final class CropView: UIView {
                                                            andContentFrame: contentBounds,
                                                            aspectRatioLockEnabled: aspectRatioLockEnabled)
         
-        print("newCropBoxFrame is \(newCropBoxFrame.width) - \(newCropBoxFrame.height)")
+//        print("newCropBoxFrame is \(newCropBoxFrame.width) - \(newCropBoxFrame.height)")
         
         guard newCropBoxFrame.width >= cropViewMinimumBoxSize
                 && newCropBoxFrame.height >= cropViewMinimumBoxSize else {

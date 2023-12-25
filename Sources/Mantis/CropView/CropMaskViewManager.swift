@@ -48,7 +48,7 @@ extension CropMaskViewManager: CropMaskViewManagerProtocol {
     
     func showDimmingBackground(animated: Bool) {
         if animated {
-            UIView.animate(withDuration: 0.1) {
+            UIView.animate(withDuration: 0.1, delay: 0, options: [.curveEaseInOut, .beginFromCurrentState]) {
                 self.showDimmingBackground()
             }
         } else {
@@ -58,7 +58,7 @@ extension CropMaskViewManager: CropMaskViewManagerProtocol {
     
     func showVisualEffectBackground(animated: Bool) {
         if animated {
-            UIView.animate(withDuration: 0.5) {
+            UIView.animate(withDuration: 0.25, delay: 0.5, options: [.curveEaseInOut, .beginFromCurrentState]) {
                 self.showVisualEffectBackground()
             }
         } else {

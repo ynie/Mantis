@@ -44,6 +44,9 @@ final class RotationDial: UIView {
     private var dialPlateHolder: UIView?
     private var pointer: CAShapeLayer = CAShapeLayer()
     
+    private let feedbackGenerator = UIImpactFeedbackGenerator(style: .light)
+    private var previousFeedbackAngle: Int = 0
+
     init(frame: CGRect,
          config: RotationDialConfig,
          viewModel: RotationDialViewModelProtocol,
@@ -95,9 +98,13 @@ extension RotationDial {
         guard angle <= angleLimit else {
             return
         }
-
+        
         if updateRotation(bySteppingAngle: angle) {
             let newAngle = getRotationAngle()
+            if Int(newAngle.degrees / 2) != previousFeedbackAngle {
+                self.feedbackGenerator.impactOccurred()
+                self.previousFeedbackAngle = Int(newAngle.degrees / 2)
+            }
             didUpdateRotationValue(newAngle)
         }
     }

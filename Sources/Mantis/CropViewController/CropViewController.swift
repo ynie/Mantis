@@ -331,10 +331,9 @@ extension CropViewController {
         
         cropStackView?.translatesAutoresizingMaskIntoConstraints = false
         stackView?.translatesAutoresizingMaskIntoConstraints = false
-        cropToolbar.translatesAutoresizingMaskIntoConstraints = false
         
         stackView?.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor).isActive = true
-        stackView?.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor).isActive = true
+        stackView?.bottomAnchor.constraint(equalTo: view.bottomAnchor).isActive = true
         stackView?.leftAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leftAnchor).isActive = true
         stackView?.rightAnchor.constraint(equalTo: view.safeAreaLayoutGuide.rightAnchor).isActive = true
     }
@@ -355,13 +354,10 @@ extension CropViewController {
         }
         
         stackView?.removeArrangedSubview(cropStackView)
-        stackView?.removeArrangedSubview(cropToolbar)
         
         if Orientation.treatAsPortrait || Orientation.isLandscapeRight {
             stackView?.addArrangedSubview(cropStackView)
-            stackView?.addArrangedSubview(cropToolbar)
         } else if Orientation.isLandscapeLeft {
-            stackView?.addArrangedSubview(cropToolbar)
             stackView?.addArrangedSubview(cropStackView)
         }
     }

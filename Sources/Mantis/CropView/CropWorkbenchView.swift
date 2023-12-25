@@ -35,6 +35,7 @@ final class CropWorkbenchView: UIScrollView {
         clipsToBounds = false
         contentSize = bounds.size
         layer.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        decelerationRate = .fast
 
         self.minimumZoomScale = minimumZoomScale
         self.maximumZoomScale = maximumZoomScale
