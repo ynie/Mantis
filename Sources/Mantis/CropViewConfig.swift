@@ -23,9 +23,9 @@ public struct CropViewConfig {
     /**
      When backgroundColor is set, cropMaskVisualEffectType is automatically set to custom type
      */
-    public var backgroundColor: UIColor? {
+    public var backgroundColor: UIColor = .clear {
         didSet {
-            cropMaskVisualEffectType = .custom(color: backgroundColor!)
+            cropMaskVisualEffectType = .custom(color: backgroundColor)
         }
     }
     
@@ -55,9 +55,7 @@ public struct CropViewConfig {
             assert(padding >= 3, "padding is need to be at least 3 in order to show the whole crop box handles")
         }
     }
-    
-    public var cropActivityIndicator: ActivityIndicatorProtocol?
-    
+        
     public var cropActivityIndicatorSize = CGSize(width: 100, height: 100)
     
     public var rotationControlViewHeight: CGFloat = 60

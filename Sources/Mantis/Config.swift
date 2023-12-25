@@ -32,25 +32,34 @@ public final class LocalizationConfig {
     
 // MARK: - Config
 public struct Config {
-    
-    public enum CropMode {
-        case sync
-        case async // We may need this mode when cropping big images
-    }
+    public enum Mode {
+        case rectangle(size: CGSize)
+        case circle(size: CGSize)
         
-    public var cropMode: CropMode = .sync
+        public var size: CGSize? {
+            switch self {
+            case .rectangle(let size):
+                return size
+                
+            case .circle(let size):
+                return size
+            }
+        }
+        
+        var ratioType: PresetFixedRatioType {
+            switch self {
+            case .rectangle(let size):
+                return .alwaysUsingOnePresetFixedRatio(ratio: size.width / size.height)
+                
+            case .circle(let size):
+                return .alwaysUsingOnePresetFixedRatio(ratio: size.width / size.height)
+            }
+        }
+    }
     
-    public var cropViewConfig = CropViewConfig()    
-    public var cropToolbarConfig = CropToolbarConfig()
+    public var cropViewConfig = CropViewConfig()
+    public var mode: Mode
     
-    public var ratioOptions: RatioOptions = .all
-    public var presetFixedRatioType: PresetFixedRatioType = .canUseMultiplePresetFixedRatio()
-    public var showAttachedCropToolbar = true
-    
-    public private(set) var localizationConfig = Mantis.localizationConfig
-    
-    var customRatios: [(width: Int, height: Int)] = []
-
     static private var bundleIdentifier: String = {
         return "com.echo.framework.Mantis"
     }()
@@ -67,28 +76,7 @@ public struct Config {
         return Bundle(url: url)
     }()
     
-    static var language: Language?
-
-    public init() {}
-
-    mutating public func addCustomRatio(byHorizontalWidth width: Int, andHorizontalHeight height: Int) {
-        assert(width > 0 && height > 0)
-        customRatios.append((width, height))
-    }
-
-    mutating public func addCustomRatio(byVerticalWidth width: Int, andVerticalHeight height: Int) {
-        assert(width > 0 && height > 0)
-        customRatios.append((height, width))
-    }
-
-    func hasCustomRatios() -> Bool {
-        return !customRatios.isEmpty
-    }
-
-    func getCustomRatioItems() -> [RatioItemType?] {
-        return customRatios.map {
-            RatioItemType(nameH: String("\($0.width):\($0.height)"), ratioH: Double($0.width)/Double($0.height),
-                          nameV: String("\($0.height):\($0.width)"), ratioV: Double($0.height)/Double($0.width))
-        }
+    public init(mode: Mode) {
+        self.mode = mode
     }
 }

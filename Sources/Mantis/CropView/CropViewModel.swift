@@ -116,14 +116,6 @@ final class CropViewModel: CropViewModelProtocol {
         return getTotalRadians(by: radians)
     }
     
-    func getRatioType(byImageIsOriginalHorizontal isHorizontal: Bool) -> RatioType {
-        if isUpOrUpsideDown() {
-            return isHorizontal ? .horizontal : .vertical
-        } else {
-            return isHorizontal ? .vertical : .horizontal
-        }
-    }
-    
     func isUpOrUpsideDown() -> Bool {
         return rotationType == .none || rotationType == .counterclockwise180
     }

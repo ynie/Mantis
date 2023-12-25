@@ -8,6 +8,7 @@
 import UIKit
 
 protocol ImageContainerProtocol: UIView {
+    func update(image: UIImage)
     func contains(rect: CGRect, fromView view: UIView, tolerance: CGFloat) -> Bool
     func getCropRegion(withCropBoxFrame cropBoxFrame: CGRect, cropView: UIView) -> CropRegion
 }

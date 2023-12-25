@@ -20,7 +20,8 @@ extension CGImage {
     func transformedImage(_ transform: CGAffineTransform,
                           outputSize: CGSize,
                           cropSize: CGSize,
-                          imageViewSize: CGSize) throws -> CGImage? {
+                          imageViewSize: CGSize,
+                          backgroundColor: UIColor) throws -> CGImage? {
         guard var colorSpaceRef = self.colorSpace else {
             throw ImageProcessError.noColorSpace
         }
@@ -77,7 +78,7 @@ extension CGImage {
                                                          bitsPerComponent: bitsPerComponent)
         }
                 
-        context.setFillColor(UIColor.clear.cgColor)
+        context.setFillColor(backgroundColor.cgColor)
         context.fill(CGRect(origin: .zero, size: outputSize))
         
         var uiCoords = CGAffineTransform(scaleX: outputSize.width / cropSize.width,

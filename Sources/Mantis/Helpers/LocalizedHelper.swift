@@ -20,7 +20,7 @@ struct LocalizedHelper {
     
     static func getString(
         _ key: String,
-        localizationConfig: LocalizationConfig = Mantis.localizationConfig,
+        localizationConfig: LocalizationConfig = LocalizationConfig(),
         value: String? = nil
     ) -> String {
         let value = value ?? key
@@ -28,17 +28,7 @@ struct LocalizedHelper {
 #if MANTIS_SPM
         let bundle = localizationConfig.bundle ?? Bundle.module
         
-        guard let bundle = convertToLanguageBundleIfNeeded(by: bundle) else {
-            return value
-        }
-        
-        return NSLocalizedString(
-            key,
-            tableName: localizationConfig.tableName,
-            bundle: bundle,
-            value: value,
-            comment: ""
-        )
+        return value
 #else
         guard let bundle = LocalizedHelper.bundle ?? (localizationConfig.bundle ?? Mantis.bundle) else {
             return value
@@ -56,15 +46,5 @@ struct LocalizedHelper {
             comment: ""
         )
 #endif
-    }
-    
-    static private func convertToLanguageBundleIfNeeded(by bundle: Bundle?) -> Bundle? {
-        if let languageCode = Mantis.Config.language?.code,
-           let languageBundlePath = bundle?.path(forResource: languageCode, ofType: "lproj"),
-           let languageBundle = Bundle(path: languageBundlePath) {
-            return languageBundle
-        }
-        
-        return bundle
     }
 }

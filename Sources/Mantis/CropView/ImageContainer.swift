@@ -38,6 +38,10 @@ final class ImageContainer: UIView {
 }
 
 extension ImageContainer: ImageContainerProtocol {
+    func update(image: UIImage) {
+        self.imageView.image = image
+    }
+    
     func contains(rect: CGRect, fromView view: UIView, tolerance: CGFloat = 0.5) -> Bool {
         let newRect = view.convert(rect, to: self)
         

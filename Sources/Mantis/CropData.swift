@@ -50,7 +50,8 @@ public typealias CropInfo = (
     scaleY: CGFloat,
     cropSize: CGSize,
     imageViewSize: CGSize,
-    cropRegion: CropRegion
+    cropRegion: CropRegion,
+    backgroundColor: UIColor
 )
 
 typealias CropOutput = (

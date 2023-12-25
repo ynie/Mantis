@@ -25,14 +25,18 @@
 import UIKit
 
 protocol CropViewDelegate: AnyObject {
-    func cropViewDidBecomeResettable(_ cropView: CropViewProtocol)
-    func cropViewDidBecomeUnResettable(_ cropView: CropViewProtocol)
-    func cropViewDidBeginResize(_ cropView: CropViewProtocol)
-    func cropViewDidEndResize(_ cropView: CropViewProtocol)
+    func cropViewDidBecomeResettable(_ cropView: CropView)
+    func cropViewDidBecomeUnResettable(_ cropView: CropView)
+    func cropViewDidBeginResize(_ cropView: CropView)
+    func cropViewDidEndResize(_ cropView: CropView)
 }
 
 final class CropView: UIView {
-    var image: UIImage
+    var image: UIImage {
+        didSet {
+            self.imageContainer.update(image: self.image)
+        }
+    }
     
     let viewModel: CropViewModelProtocol
     
@@ -65,27 +69,6 @@ final class CropView: UIView {
     
     private var flipOddTimes = false
     
-    lazy private var activityIndicator: ActivityIndicatorProtocol = {
-        let activityIndicator: ActivityIndicatorProtocol
-        if let indicator = cropViewConfig.cropActivityIndicator {
-            activityIndicator = indicator
-        } else {
-            let indicator = UIActivityIndicatorView(frame: .zero)
-            indicator.color = .white
-            indicator.transform = CGAffineTransform(scaleX: 2.0, y: 2.0)
-            activityIndicator = indicator
-        }
-        
-        addSubview(activityIndicator)
-        activityIndicator.translatesAutoresizingMaskIntoConstraints = false
-        activityIndicator.centerXAnchor.constraint(equalTo: centerXAnchor).isActive = true
-        activityIndicator.centerYAnchor.constraint(equalTo: centerYAnchor).isActive = true
-        activityIndicator.widthAnchor.constraint(equalToConstant: cropViewConfig.cropActivityIndicatorSize.width).isActive = true
-        activityIndicator.heightAnchor.constraint(equalToConstant: cropViewConfig.cropActivityIndicatorSize.width).isActive = true
-        
-        return activityIndicator
-    }()
-    
     deinit {
         print("CropView deinit.")
     }
@@ -109,9 +92,7 @@ final class CropView: UIView {
         
         super.init(frame: .zero)
         
-        if let color = cropViewConfig.backgroundColor {
-            self.backgroundColor = color
-        }
+        self.backgroundColor = cropViewConfig.backgroundColor
         
         viewModel.statusChanged = { [weak self] status in
             self?.render(by: status)
@@ -653,8 +634,6 @@ extension CropView {
         DispatchQueue.global(qos: .userInteractive).async {
             let maskedCropOutput = self.addImageMask(to: cropOutput)
             DispatchQueue.main.async {
-                self.activityIndicator.stopAnimating()
-                self.activityIndicator.isHidden = true
                 completion(maskedCropOutput)
             }
         }
@@ -807,7 +786,7 @@ extension CropView {
     }
 }
 
-extension CropView: CropViewProtocol {
+internal extension CropView {
     private func setForceFixedRatio(by presetFixedRatioType: PresetFixedRatioType) {
         switch presetFixedRatioType {
         case .alwaysUsingOnePresetFixedRatio:
@@ -819,12 +798,7 @@ extension CropView: CropViewProtocol {
     
     func initialSetup(delegate: CropViewDelegate, presetFixedRatioType: PresetFixedRatioType) {
         self.delegate = delegate
-        setViewDefaultProperties()
         setForceFixedRatio(by: presetFixedRatioType)
-    }
-    
-    func getRatioType(byImageIsOriginalHorizontal isHorizontal: Bool) -> RatioType {
-        return viewModel.getRatioType(byImageIsOriginalHorizontal: isHorizontal)
     }
     
     func getImageHorizontalToVerticalRatio() -> Double {
@@ -1114,11 +1088,7 @@ extension CropView: CropViewProtocol {
     
     /// completion is called in the main thread
     func asyncCrop(completion: @escaping (CropOutput) -> Void ) {
-        activityIndicator.isHidden = false
-        activityIndicator.startAnimating()
-        
         asyncCrop(image) { [weak self] cropOutput  in
-            self?.activityIndicator.isHidden = true
             completion(cropOutput)
         }
     }
@@ -1161,7 +1131,8 @@ extension CropView: CropViewProtocol {
             scaleY: scaleY,
             cropSize: cropAuxiliaryIndicatorView.frame.size,
             imageViewSize: imageContainer.bounds.size,
-            cropRegion: cropRegion
+            cropRegion: cropRegion,
+            backgroundColor: cropViewConfig.backgroundColor
         )
     }
     
@@ -1173,8 +1144,4 @@ extension CropView: CropViewProtocol {
         viewModel.setRotatingStatus(by: angle)
         rotationControlView?.updateRotationValue(by: angle)
     }
-}
-
-extension UIActivityIndicatorView: ActivityIndicatorProtocol {
-    
 }

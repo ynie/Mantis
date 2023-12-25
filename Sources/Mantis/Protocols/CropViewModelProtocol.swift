@@ -37,7 +37,6 @@ protocol CropViewModelProtocol: AnyObject {
     func reset(forceFixedRatio: Bool)
     func rotateBy90(withRotateType type: RotateBy90DegreeType)
     func getTotalRadians() -> CGFloat
-    func getRatioType(byImageIsOriginalHorizontal isHorizontal: Bool) -> RatioType
     func isUpOrUpsideDown() -> Bool
     func prepareForCrop(byTouchPoint point: CGPoint)
     

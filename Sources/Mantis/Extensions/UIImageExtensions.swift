@@ -95,7 +95,8 @@ extension UIImage {
             guard let transformedCGImage = try fixedOrientationImage.transformedImage(transform,
                                                                                       outputSize: outputSize,
                                                                                       cropSize: cropInfo.cropSize,
-                                                                                      imageViewSize: cropInfo.imageViewSize) else {
+                                                                                      imageViewSize: cropInfo.imageViewSize,
+                                                                                      backgroundColor: cropInfo.backgroundColor) else {
                 return nil
             }
             
