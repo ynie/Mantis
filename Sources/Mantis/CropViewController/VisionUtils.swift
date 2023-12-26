@@ -11,20 +11,40 @@ import Vision
 import CoreImage
 import CoreImage.CIFilterBuiltins
 
+enum CRPVisionError: Error, LocalizedError {
+    case failedToEncodeImage
+    case noBackgroundDetected
+    case failedToSegmentedBackground
+    case noPeopleDetected
+    case tooManyPeopleDetected
+    case failedToRemoveBackground
+    case failedToGenerateForegroundImage1
+    case failedToGenerateForegroundImage2
+    
+    var errorDescription: String? {
+        switch self {
+        case .failedToEncodeImage:
+            return "Failed to load the image. Please try again later."
+        case .noBackgroundDetected:
+            return "No foreground content detected in the image."
+        case .failedToSegmentedBackground:
+            return "No background content detected in the image."
+        case .noPeopleDetected:
+            return "No people detected in the image."
+        case .tooManyPeopleDetected:
+            return "More than one person detected in the image."
+        case .failedToRemoveBackground:
+            return "Internal Failure(1)"
+        case .failedToGenerateForegroundImage1:
+            return "Internal Failure(2)"
+        case .failedToGenerateForegroundImage2:
+            return "Internal Failure(3)"
+        }
+    }
+}
+
 func CRPExtractForegroundImage(sourceImage: UIImage) async throws -> UIImage {
-    enum RemoveBackgroundError: Error, LocalizedError {
-        case failedToEncodeImage
-        case noBackgroundDetected
-        case failedToRemoveBackground
-        case failedToGenerateForegroundImage1
-        case failedToGenerateForegroundImage2
-    }
-    let orientation = CGImagePropertyOrientation(sourceImage.imageOrientation).rawValue
-    guard let inputImage = CIImage(image: sourceImage,
-                                   options: [.applyOrientationProperty: true,
-                                             .properties: [kCGImagePropertyOrientation: orientation]]) else {
-        throw RemoveBackgroundError.failedToEncodeImage
-    }
+    let inputImage = try sourceImage.toCIImage()
     
     let request = VNGenerateForegroundInstanceMaskRequest()
     let handler = VNImageRequestHandler(ciImage: inputImage)
@@ -32,32 +52,15 @@ func CRPExtractForegroundImage(sourceImage: UIImage) async throws -> UIImage {
     try handler.perform([request])
     
     guard let result = request.results?.first else {
-        throw RemoveBackgroundError.noBackgroundDetected
+        throw CRPVisionError.noBackgroundDetected
     }
     
     let instances = result.allInstances
     guard let maskBuffer = try? result.generateScaledMaskForImage(forInstances: instances, from: handler) else {
-        throw RemoveBackgroundError.failedToRemoveBackground
+        throw CRPVisionError.failedToRemoveBackground
     }
     
-    let maskImage = CIImage(cvPixelBuffer: maskBuffer)
-    
-    let blendWithMaskFilter = CIFilter.blendWithMask()
-    blendWithMaskFilter.inputImage = inputImage
-    blendWithMaskFilter.backgroundImage = CIImage(color: .clear)
-    blendWithMaskFilter.maskImage = maskImage
-    guard let foregroundResult = blendWithMaskFilter.outputImage else {
-        throw RemoveBackgroundError.failedToGenerateForegroundImage1
-    }
-    
-    let context = CIContext(options: nil)
-    guard let cgImage = context.createCGImage(foregroundResult,
-                                              from: CGRect(origin: .zero, size: inputImage.extent.size)) else {
-        throw RemoveBackgroundError.failedToGenerateForegroundImage2
-    }
-
-    let foregroundImage = UIImage(cgImage: cgImage)
-    return foregroundImage
+    return try inputImage.applyMaskBuffer(maskBuffer)
 }
 
 func CRPTrimTransparentPixelsInImage(sourceImage: UIImage, targetSize: CGSize?) async throws -> UIImage {
@@ -87,7 +90,75 @@ func CRPTrimTransparentPixelsInImage(sourceImage: UIImage, targetSize: CGSize?) 
     }
 }
 
+func CRPCropPersonInImage(sourceImage: UIImage, targetSize: CGSize?) async throws -> UIImage {
+    try autoreleasepool {
+        let inputImage = try sourceImage.toCIImage()
+        
+        var segmentationRequest = VNGeneratePersonSegmentationRequest()
+        segmentationRequest.qualityLevel = .accurate
+        
+        var faceRequest = VNDetectFaceRectanglesRequest()
+        faceRequest.revision = VNDetectFaceRectanglesRequestRevision3
+        
+        let handler = VNImageRequestHandler(ciImage: inputImage)
+        try handler.perform([segmentationRequest, faceRequest])
+        
+        let faceResults = faceRequest.results ?? []
+        if faceResults.count == 0 {
+            throw CRPVisionError.noPeopleDetected
+        }
+        if faceResults.count > 1 {
+            throw CRPVisionError.tooManyPeopleDetected
+        }
+        guard let result = segmentationRequest.results?.first else {
+            throw CRPVisionError.failedToSegmentedBackground
+        }
+        
+        var image = try inputImage.applyMaskBuffer(result.pixelBuffer)
+            
+        image = image.cropAlpha()
+        return image
+    }
+}
+
+extension CIImage {
+    func applyMaskBuffer(_ buffer: CVPixelBuffer) throws -> UIImage {
+        let maskImage = CIImage(cvPixelBuffer: buffer)
+        
+        let maskScaleX = self.extent.width / maskImage.extent.width
+        let maskScaleY = self.extent.height / maskImage.extent.height
+        let maskScaled = maskImage.transformed(by: CGAffineTransform(maskScaleX, 0, 0, maskScaleY, 0, 0))
+        
+        let blendWithMaskFilter = CIFilter.blendWithMask()
+        blendWithMaskFilter.inputImage = self
+        blendWithMaskFilter.backgroundImage = CIImage(color: .clear)
+        blendWithMaskFilter.maskImage = maskScaled
+        guard let foregroundResult = blendWithMaskFilter.outputImage else {
+            throw CRPVisionError.failedToGenerateForegroundImage1
+        }
+        
+        let context = CIContext(options: nil)
+        guard let cgImage = context.createCGImage(foregroundResult,
+                                                  from: CGRect(origin: .zero, size: self.extent.size)) else {
+            throw CRPVisionError.failedToGenerateForegroundImage2
+        }
+
+        let result = UIImage(cgImage: cgImage)
+        return result
+    }
+}
+
 extension UIImage {
+    func toCIImage() throws -> CIImage {
+        let orientation = CGImagePropertyOrientation(self.imageOrientation).rawValue
+        guard let inputImage = CIImage(image: self,
+                                       options: [.applyOrientationProperty: true,
+                                                 .properties: [kCGImagePropertyOrientation: orientation]]) else {
+            throw CRPVisionError.failedToEncodeImage
+        }
+        return inputImage
+    }
+    
     func cropAlpha() -> UIImage {
         let cgImage = self.cgImage!
         
@@ -95,7 +166,7 @@ extension UIImage {
         let height = cgImage.height
         
         let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let bytesPerPixel:Int = 4
+        let bytesPerPixel: Int = 4
         let bytesPerRow = bytesPerPixel * width
         let bitsPerComponent = 8
         let bitmapInfo: UInt32 = CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
@@ -138,6 +209,35 @@ extension UIImage {
         let croppedImage =  self.cgImage!.cropping(to: rect)!
         let ret = UIImage(cgImage: croppedImage, scale: imageScale, orientation: self.imageOrientation)
         return ret
+    }
+    
+    func toCVPixelBuffer() -> CVPixelBuffer? {
+        let attrs = [kCVPixelBufferCGImageCompatibilityKey: kCFBooleanTrue, kCVPixelBufferCGBitmapContextCompatibilityKey: kCFBooleanTrue] as CFDictionary
+        var pixelBuffer : CVPixelBuffer?
+        let status = CVPixelBufferCreate(kCFAllocatorDefault, Int(self.size.width), Int(self.size.height), kCVPixelFormatType_32ARGB, attrs, &pixelBuffer)
+        guard status == kCVReturnSuccess else {
+            return nil
+        }
+        
+        if let pixelBuffer = pixelBuffer {
+            CVPixelBufferLockBaseAddress(pixelBuffer, CVPixelBufferLockFlags(rawValue: 0))
+            let pixelData = CVPixelBufferGetBaseAddress(pixelBuffer)
+            
+            let rgbColorSpace = CGColorSpaceCreateDeviceRGB()
+            let context = CGContext(data: pixelData, width: Int(self.size.width), height: Int(self.size.height), bitsPerComponent: 8, bytesPerRow: CVPixelBufferGetBytesPerRow(pixelBuffer), space: rgbColorSpace, bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue)
+            
+            context?.translateBy(x: 0, y: self.size.height)
+            context?.scaleBy(x: 1.0, y: -1.0)
+            
+            UIGraphicsPushContext(context!)
+            self.draw(in: CGRect(x: 0, y: 0, width: self.size.width, height: self.size.height))
+            UIGraphicsPopContext()
+            CVPixelBufferUnlockBaseAddress(pixelBuffer, CVPixelBufferLockFlags(rawValue: 0))
+            
+            return pixelBuffer
+        }
+        
+        return nil
     }
 }
 

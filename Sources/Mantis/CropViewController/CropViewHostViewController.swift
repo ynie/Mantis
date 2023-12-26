@@ -7,6 +7,7 @@
 
 import Foundation
 import UIKit
+import VisionKit
 
 public class CropViewHostViewController: UINavigationController {
     public init(image: UIImage, config: Mantis.Config, delegate: CropViewControllerDelegate) {

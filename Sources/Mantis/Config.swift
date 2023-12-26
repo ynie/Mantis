@@ -35,6 +35,7 @@ public struct Config {
     public enum Mode {
         case rectangle(size: CGSize)
         case circle(size: CGSize)
+        case person(size: CGSize)
         
         public var size: CGSize? {
             switch self {
@@ -42,6 +43,9 @@ public struct Config {
                 return size
                 
             case .circle(let size):
+                return size
+                
+            case .person(let size):
                 return size
             }
         }
@@ -53,6 +57,19 @@ public struct Config {
                 
             case .circle(let size):
                 return .alwaysUsingOnePresetFixedRatio(ratio: size.width / size.height)
+                
+            case .person:
+                return .canUseMultiplePresetFixedRatio(defaultRatio: 0)
+            }
+        }
+        
+        var isBottomToolBarVisible: Bool {
+            switch self {
+            case .person:
+                return false
+                
+            default:
+                return true
             }
         }
     }

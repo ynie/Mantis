@@ -1099,7 +1099,7 @@ internal extension CropView {
         let point = rect.center
         let zeroPoint = cropAuxiliaryIndicatorView.center
         
-        let translation =  CGPoint(x: (point.x - zeroPoint.x), y: (point.y - zeroPoint.y))
+        let translation = CGPoint(x: (point.x - zeroPoint.x), y: (point.y - zeroPoint.y))
         
         var scaleX = cropWorkbenchView.zoomScale
         var scaleY = cropWorkbenchView.zoomScale

@@ -36,7 +36,6 @@ internal class CropViewController: UIViewController {
     }
     private var imageAdjustHelper: ImageAutoAdjustHelper?
     
-    private var disableRotation = false
     private var hasDoneInitialLayout = false
     
     private var hasTransformChanges = false {
@@ -54,11 +53,15 @@ internal class CropViewController: UIViewController {
             self.updateToolbarItems()
         }
     }
-
     private lazy var bottomToolbar: UIToolbar = {
         let toolbar = UIToolbar()
         toolbar.barStyle = .black
         return toolbar
+    }()
+    private lazy var spinner: UIActivityIndicatorView = {
+        let spinner = UIActivityIndicatorView()
+        spinner.startAnimating()
+        return spinner
     }()
     
     deinit {
@@ -78,11 +81,7 @@ internal class CropViewController: UIViewController {
     override open func viewDidLoad() {
         super.viewDidLoad()
 
-#if targetEnvironment(macCatalyst)
-        modalPresentationStyle = .fullScreen
-        navigationController?.modalPresentationStyle = .fullScreen
-#endif
-        view.backgroundColor = .black
+        self.view.backgroundColor = .black
         
         cropView.initialSetup(delegate: self, presetFixedRatioType: config.mode.ratioType)
         
@@ -101,25 +100,37 @@ internal class CropViewController: UIViewController {
         
         self.updateToolbarItems()
         self.view.addSubview(self.cropView)
-        self.view.addSubview(self.bottomToolbar)
         
+        if config.mode.isBottomToolBarVisible {
+            self.view.addSubview(self.bottomToolbar)
+        }
+                
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(systemItem: .cancel, 
                                                                 primaryAction: UIAction { [weak self] _ in
             self?.didTapCancel()
         })
         
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(systemItem: .done,
-                                                                 primaryAction: UIAction { [weak self] _ in
-            self?.didTapDone()
-        })
+        switch self.config.mode {
+        case .person:
+            self.startPersonCrop()
+            
+        default:
+            self.setupDoneButton()
+        }
     }
     
     override public func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         
         let size = self.view.bounds.size
-        self.bottomToolbar.sizeToFit()
-        let toolbarHeight = self.view.safeAreaInsets.bottom + self.bottomToolbar.bounds.height
+        
+        var toolbarHeight: CGFloat = 0
+        if config.mode.isBottomToolBarVisible {
+            self.bottomToolbar.sizeToFit()
+            toolbarHeight = self.view.safeAreaInsets.bottom + self.bottomToolbar.bounds.height
+        } else {
+            self.bottomToolbar.frame = .zero
+        }
         self.bottomToolbar.frame = CGRect(x: 0,
                                           y: size.height - toolbarHeight,
                                           width: size.width,
@@ -129,7 +140,14 @@ internal class CropViewController: UIViewController {
                                      y: topPadding,
                                      width: size.width,
                                      height: self.bottomToolbar.frame.origin.y - topPadding)
-
+        
+        self.spinner.sizeToFit()
+        let spinnerSize = self.spinner.bounds.size
+        self.spinner.frame = CGRect(x: (size.width - spinnerSize.width) / 2.0,
+                                    y: (size.height - spinnerSize.height) / 2.0,
+                                    width: spinnerSize.width,
+                                    height: spinnerSize.height)
+        
         if hasDoneInitialLayout == false {
             hasDoneInitialLayout = true
             cropView.resetComponents()
@@ -180,6 +198,13 @@ internal class CropViewController: UIViewController {
 
 // Auto layout
 private extension CropViewController {
+    func setupDoneButton() {
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(systemItem: .done,
+                                                                 primaryAction: UIAction { [weak self] _ in
+            self?.didTapDone()
+        })
+    }
+    
     func setFixedRatio(_ ratio: Double, zoom: Bool = true) {
         cropView.setFixedRatio(ratio, zoom: zoom, presetFixedRatioType: config.mode.ratioType)
     }
@@ -309,12 +334,56 @@ private extension CropViewController {
         }
     }
     
+    func presentCutOutASubjectController() {
+//        let vc = CropSubjectViewControllerViewController(originalImage: self.cropView.image)
+//        let nav = UINavigationController(rootViewController: vc)
+//        let appearance = UINavigationBarAppearance()
+//        appearance.configureWithOpaqueBackground()
+//        nav.navigationBar.standardAppearance = appearance
+//        nav.overrideUserInterfaceStyle = .dark
+//        self.present(nav, animated: true)
+    }
+    
+    func startPersonCrop() {
+        self.cropView.isHidden = true
+        self.view.addSubview(self.spinner)
+        
+        Task {
+            do {
+                let image = try await CRPCropPersonInImage(sourceImage: self.originalImage, targetSize: nil)
+                
+                await MainActor.run {
+                    self.cropView.image = image
+                    self.cropView.reset()
+                    self.cropView.isHidden = false
+                    self.spinner.removeFromSuperview()
+                    self.setupDoneButton()
+                }
+            } catch {
+                await MainActor.run {
+                    let message = "Failed to crop out the person in the image. \(error.localizedDescription)"
+                    let alertViewController = UIAlertController(title: "",
+                                                                message: message,
+                                                                preferredStyle: .alert)
+                    alertViewController.addAction(UIAlertAction(title: "OK", style: .cancel, handler: { [weak self] _ in
+                        self?.dismiss(animated: true)
+                    }))
+                    self.present(alertViewController, animated: true)
+                }
+            }
+        }
+    }
+    
     func updateToolbarItems() {
         let cropMenuItems: [UIAction] = [
-            UIAction(title: "Remove Background", image: UIImage(systemName: "lasso.badge.sparkles"), handler: { [weak self] _ in
+            UIAction(title: "Remove Background", image: UIImage(systemName: "person.and.background.dotted"), handler: { [weak self] _ in
                 self?.removeBackground()
             }),
-            UIAction(title: "People Sticker", image: UIImage(systemName: "person.and.background.dotted"), handler: { (_) in
+            UIAction(title: "Cut Out a Subject", image: UIImage(systemName: "lasso.badge.sparkles"), handler: { [weak self] (_) in
+                self?.presentCutOutASubjectController()
+            }),
+            UIAction(title: "Remove Transparent Pixels", image: UIImage(systemName: "eraser.line.dashed"), handler: { [weak self] _ in
+                self?.trimTransparentPixels()
             }),
         ]
         let cropItem = UIBarButtonItem(title: "Crop",
@@ -323,22 +392,11 @@ private extension CropViewController {
                                        action: nil,
                                        menu: UIMenu(title: "Cropping Tools", children: cropMenuItems))
         
-        let trimMenuItems: [UIAction] = [
-            UIAction(title: "Remove Transparent Pixels", image: UIImage(systemName: "eraser.line.dashed"), handler: { [weak self] _ in
-                self?.trimTransparentPixels()
-            }),
-        ]
-        let trimItem = UIBarButtonItem(title: "Eraser",
-                                       image: UIImage(systemName: "eraser"),
-                                       target: nil,
-                                       action: nil,
-                                       menu: UIMenu(title: "Eraser Tools", children: trimMenuItems))
-        
         let resetItem = UIBarButtonItem(title: "Reset",
                                         style: .plain,
                                         target: self,
                                         action: #selector(didTapReset))
-
+        resetItem.isEnabled = (self.isProcessing == false)
         let spinner = UIActivityIndicatorView()
         spinner.startAnimating()
         spinner.sizeToFit()
@@ -351,7 +409,6 @@ private extension CropViewController {
             items.append(spinnerItem)
         } else {
             items.append(cropItem)
-            items.append(trimItem)
         }
         items.append(flexSpaceItem)
         if self.hasImageChanges || self.hasTransformChanges {
