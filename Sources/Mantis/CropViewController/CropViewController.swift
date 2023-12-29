@@ -289,9 +289,11 @@ private extension CropViewController {
         
         Task {
             do {
-                let image = try await CRPExtractForegroundImage(sourceImage: self.cropView.image)
+                let image = try await CRPExtractForegroundImage(sourceImage: self.cropView.image,
+                                                                targetSize: self.config.mode.size)
                 await MainActor.run {
                     self.cropView.image = image
+                    self.cropView.reset()
                     self.hasImageChanges = true
                 }
             } catch {
@@ -308,34 +310,8 @@ private extension CropViewController {
         }
     }
     
-    func trimTransparentPixels() {
-        self.isProcessing = true
-        
-        Task {
-            do {
-                let image = try await CRPTrimTransparentPixelsInImage(sourceImage: self.cropView.image,
-                                                                      targetSize: self.config.mode.size)
-                await MainActor.run {
-                    self.cropView.image = image
-                    self.hasImageChanges = true
-                    self.cropView.reset()
-                }
-            } catch {
-                let message = "Failed to trim transparent pixels. \(error.localizedDescription)"
-                let alertViewController = UIAlertController(title: "Eraser Tool",
-                                                            message: message,
-                                                            preferredStyle: .alert)
-                alertViewController.addAction(UIAlertAction(title: "OK", style: .cancel))
-                self.present(alertViewController, animated: true)
-            }
-            await MainActor.run {
-                self.isProcessing = false
-            }
-        }
-    }
-    
     func presentCutOutASubjectController() {
-//        let vc = CropSubjectViewControllerViewController(originalImage: self.cropView.image)
+//        let vc = CropSubjectViewController(originalImage: self.cropView.image)
 //        let nav = UINavigationController(rootViewController: vc)
 //        let appearance = UINavigationBarAppearance()
 //        appearance.configureWithOpaqueBackground()
@@ -381,9 +357,6 @@ private extension CropViewController {
             }),
             UIAction(title: "Cut Out a Subject", image: UIImage(systemName: "lasso.badge.sparkles"), handler: { [weak self] (_) in
                 self?.presentCutOutASubjectController()
-            }),
-            UIAction(title: "Remove Transparent Pixels", image: UIImage(systemName: "eraser.line.dashed"), handler: { [weak self] _ in
-                self?.trimTransparentPixels()
             }),
         ]
         let cropItem = UIBarButtonItem(title: "Crop",

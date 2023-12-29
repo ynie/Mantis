@@ -69,7 +69,6 @@ private extension CropViewHostViewController {
                                                         effectType: cropViewConfig.cropMaskVisualEffectType)
         
         dimmingView.overLayerFillColor = cropViewConfig.backgroundColor.cgColor
-        visualEffectView.overLayerFillColor = cropViewConfig.backgroundColor.cgColor
         
         return CropMaskViewManager(dimmingView: dimmingView, visualEffectView: visualEffectView)
     }

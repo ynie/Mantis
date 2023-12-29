@@ -9,7 +9,6 @@
 import UIKit
 
 final class CropMaskVisualEffectView: UIVisualEffectView, CropMaskProtocol {
-    var overLayerFillColor = UIColor.black.cgColor
     var maskLayer: CALayer?
     var cropShapeType: CropShapeType = .rect
     var imageRatio: CGFloat = 1.0

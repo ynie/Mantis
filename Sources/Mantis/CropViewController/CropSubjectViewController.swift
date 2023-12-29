@@ -1,16 +1,16 @@
 ////
-////  PeopleSegmentationPickerViewController.swift
+////  CropSubjectViewController.swift
 ////
 ////
 ////  Created by Steven Nie on 12/25/23.
 ////
+
+import Foundation
+import UIKit
+import Vision
+import VisionKit
 //
-//import Foundation
-//import UIKit
-//import Vision
-//import VisionKit
-//
-//class PeopleSegmentationPickerViewController: UIViewController {
+//class CropSubjectViewController: UIViewController {
 //    let originalImage: UIImage
 //    
 //    lazy var originalImageView: UIImageView = {
@@ -73,42 +73,18 @@
 //    }
 //}
 //
-//private extension PeopleSegmentationPickerViewController {
+//private extension CropSubjectViewController {
 //    enum PeopleSegmentationError: Error {
 //        case failedToEncodeImage
 //    }
 //    
 //    func startAnalysising() async throws {
-//        guard let cgImage = self.originalImage.cgImage else {
-//            throw PeopleSegmentationError.failedToEncodeImage
-//        }
-//        let request = VNGeneratePersonInstanceMaskRequest()
-//        let requestHandler = VNImageRequestHandler(cgImage: cgImage,
-//                                                   orientation: CGImagePropertyOrientation(self.originalImage.imageOrientation))
-//
-//        try requestHandler.perform([request])
-//
-//        for result in request.results ?? [] {
-//            for index in result.allInstances {
-//                let pixelBuffer = try result.generateScaledMaskForImage(forInstances: IndexSet(integer: index),
-//                                                                        from: requestHandler)
-//                var cgImage: CGImage?
-//                VTCreateCGImageFromCVPixelBuffer(pixelBuffer, options: nil, imageOut: &cgImage)
-//                if let cgImage {
-//                    let image = UIImage(cgImage: cgImage)
-//                    let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
-//                    if let filePath = paths.first?.appendingPathComponent("\(UUID().uuidString).png") {
-//                        // Save image.
-//                        do {
-//                            print(filePath)
-//                           try image.pngData()?.write(to: filePath, options: .atomic)
-//                        } catch {
-//                           // Handle the error
-//                        }
-//                    }
-//
-//                }
-//            }
-//        }
+//        let analyzer = ImageAnalyzer()
+//        let configuration = ImageAnalyzer.Configuration(.visualLookUp)
+//        let analysis = try await analyzer.analyze(self.originalImage, configuration:configuration)
+//        let interaction = ImageAnalysisInteraction()
+//        interaction.preferredInteractionTypes = [.imageSubject]
+//        interaction.analysis = analysis
+//        uiImage = try? await interaction.image(for: interaction.subjects)
 //    }
 //}

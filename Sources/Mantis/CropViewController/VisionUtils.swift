@@ -43,7 +43,7 @@ enum CRPVisionError: Error, LocalizedError {
     }
 }
 
-func CRPExtractForegroundImage(sourceImage: UIImage) async throws -> UIImage {
+func CRPExtractForegroundImage(sourceImage: UIImage, targetSize: CGSize?) async throws -> UIImage {
     let inputImage = try sourceImage.toCIImage()
     
     let request = VNGenerateForegroundInstanceMaskRequest()
@@ -60,7 +60,8 @@ func CRPExtractForegroundImage(sourceImage: UIImage) async throws -> UIImage {
         throw CRPVisionError.failedToRemoveBackground
     }
     
-    return try inputImage.applyMaskBuffer(maskBuffer)
+    let image = try inputImage.applyMaskBuffer(maskBuffer)
+    return try await CRPTrimTransparentPixelsInImage(sourceImage: image, targetSize: targetSize)
 }
 
 func CRPTrimTransparentPixelsInImage(sourceImage: UIImage, targetSize: CGSize?) async throws -> UIImage {
